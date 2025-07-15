@@ -1,0 +1,36 @@
+name: coupon_map_final
+description: A new Flutter project.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.1 <4.0.0' # <-- ใช้ SDK เวอร์ชันล่าสุดที่คุณมี
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Dependencies หลัก
+  flutter_map: ^6.1.0
+  geolocator: ^11.0.0
+  image_picker: ^1.0.7
+  latlong2: ^0.9.0
+  path_provider: ^2.1.3
+  share_plus: ^7.2.2
+  http: ^1.2.0
+
+  # --- วิธีแก้ปัญหา screenshot ---
+  screenshot:
+    git:
+      url: https://github.com/SachinGanesh/screenshot.git
+      ref: master # <--- เปลี่ยนจาก ref ที่เป็น hash มาเป็นชื่อ branch แทน
+
+  cupertino_icons: ^1.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
