@@ -1,5 +1,6 @@
 // lib/main.dart
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -7,10 +8,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+// ***** จุดแก้ไข 1: เพิ่ม as fm เพื่อป้องกันชื่อซ้ำซ้อน *****
+import 'package:flutter_map/flutter_map.dart' as fm;
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:lottie/lottie.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
@@ -19,10 +22,7 @@ import 'models/coupon_model.dart';
 
 // --- สร้าง Service สำหรับจัดการ API ---
 class ApiService {
-  // *** สำคัญ: ถ้าทดสอบบน Android Emulator ให้ใช้ 10.0.2.2
-  // *** ถ้าทดสอบบนมือถือจริงที่ต่อ Wi-Fi เดียวกัน ให้ใช้ IP Address ของคอมพิวเตอร์คุณ
-  // *** ตัวอย่าง: "http://192.168.1.100:3001/api"
-  final String baseUrl = "https://goldticket.up.railway.app/api"; // <<--- !!! แก้ไข IP ADDRESS ตรงนี้ !!!
+  final String baseUrl = "https://goldticket.up.railway.app/api";
 
   Future<List<Coupon>> fetchCoupons() async {
     try {
@@ -122,7 +122,8 @@ class CouponMapScreen extends StatefulWidget {
 class _CouponMapScreenState extends State<CouponMapScreen> {
   final ApiService apiService = ApiService();
   UserRole _currentRole = UserRole.hunter;
-  final MapController _mapController = MapController();
+  // ***** จุดแก้ไข 2: เพิ่ม fm. *****
+  final fm.MapController _mapController = fm.MapController();
   LatLng? _currentLocation;
   bool _isLoading = true;
   List<Coupon> _coupons = [];
@@ -132,6 +133,10 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
   Duration _animationDuration = const Duration(milliseconds: 250);
   static const double switchWidth = 220.0;
   static const double switchHeight = 40.0;
+
+  // --- ตัวแปรควบคุม Animation Overlay ---
+  UserRole? _roleToShowInAnimation;
+  Timer? _animationTimer;
 
   final _shopNameController = TextEditingController();
   final _igController = TextEditingController();
@@ -146,13 +151,13 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
   @override
   void initState() {
     super.initState();
-    // ตั้งค่าเริ่มต้นของ slider ตาม role
     _sliderPosition = _currentRole == UserRole.placer ? 0 : switchWidth / 2;
     _initialize();
   }
 
   @override
   void dispose() {
+    _animationTimer?.cancel();
     _shopNameController.dispose();
     _igController.dispose();
     _facebookController.dispose();
@@ -161,6 +166,29 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
     _discountBahtController.dispose();
     _totalBoxesController.dispose();
     super.dispose();
+  }
+
+  void _handleRoleChange(UserRole newRole) {
+    if (_currentRole != newRole) {
+      setState(() {
+        _roleToShowInAnimation = newRole;
+      });
+
+      _animationTimer?.cancel();
+      _animationTimer = Timer(const Duration(milliseconds: 2000), () {
+        if (mounted) {
+          setState(() {
+            _roleToShowInAnimation = null;
+          });
+        }
+      });
+    }
+
+    setState(() {
+      _currentRole = newRole;
+      _sliderPosition = newRole == UserRole.placer ? 0 : switchWidth / 2;
+      _animationDuration = const Duration(milliseconds: 250);
+    });
   }
 
   Future<void> _initialize() async {
@@ -633,9 +661,8 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-      extendBodyBehindAppBar: true, 
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -652,38 +679,31 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
               IconButton(
                 tooltip: "โหลดข้อมูลใหม่",
                 icon: Icon(Icons.refresh, color: Colors.brown.shade400),
-                onPressed: _isLoading ? null : () async {
-                  setState(() => _isLoading = true);
-                  await _loadCoupons();
-                  setState(() => _isLoading = false);
-                },
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        setState(() => _isLoading = true);
+                        await _loadCoupons();
+                        setState(() => _isLoading = false);
+                      },
               ),
-              
-              // ***** จุดแก้ไข: สวิตช์ UI ที่ลากและกดได้ *****
               GestureDetector(
                 onHorizontalDragStart: (details) {
                   setState(() {
-                    _animationDuration = Duration.zero; // ทำให้ลากได้ทันที
+                    _animationDuration = Duration.zero;
                   });
                 },
                 onHorizontalDragUpdate: (details) {
                   setState(() {
-                    // อัปเดตตำแหน่ง slider ตามการลาก และจำกัดไม่ให้ลากเกินขอบ
-                    _sliderPosition = (_sliderPosition + details.delta.dx).clamp(0.0, switchWidth / 2);
+                    _sliderPosition = (_sliderPosition + details.delta.dx)
+                        .clamp(0.0, switchWidth / 2);
                   });
                 },
                 onHorizontalDragEnd: (details) {
-                  setState(() {
-                    _animationDuration = const Duration(milliseconds: 250); // คืนค่า animation
-                    // ตรวจสอบตำแหน่งสุดท้ายแล้ว snap ไปยังฝั่งที่ใกล้ที่สุด
-                    if (_sliderPosition < switchWidth / 4) {
-                       _currentRole = UserRole.placer;
-                       _sliderPosition = 0;
-                    } else {
-                      _currentRole = UserRole.hunter;
-                      _sliderPosition = switchWidth / 2;
-                    }
-                  });
+                  final targetRole = (_sliderPosition < switchWidth / 4)
+                      ? UserRole.placer
+                      : UserRole.hunter;
+                  _handleRoleChange(targetRole);
                 },
                 child: Container(
                   width: switchWidth,
@@ -694,30 +714,22 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
                   ),
                   child: Stack(
                     children: [
-                      // --- พื้นที่กด (อยู่ด้านล่างสุด) ---
                       Row(
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => setState(() {
-                                _currentRole = UserRole.placer;
-                                _sliderPosition = 0;
-                              }),
+                              onTap: () => _handleRoleChange(UserRole.placer),
                               behavior: HitTestBehavior.opaque,
                             ),
                           ),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => setState(() {
-                                _currentRole = UserRole.hunter;
-                                _sliderPosition = switchWidth / 2;
-                              }),
+                              onTap: () => _handleRoleChange(UserRole.hunter),
                               behavior: HitTestBehavior.opaque,
                             ),
                           ),
                         ],
                       ),
-                      // --- ตัวเลื่อนพร้อมข้อความ (อยู่ด้านบน) ---
                       AnimatedPositioned(
                         duration: _animationDuration,
                         curve: Curves.easeInOut,
@@ -738,7 +750,9 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              _currentRole == UserRole.placer ? 'วางคูปอง' : 'หาคูปอง',
+                              _currentRole == UserRole.placer
+                                  ? 'วางคูปอง'
+                                  : 'ล่าคูปอง',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w500,
@@ -751,7 +765,6 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
                   ),
                 ),
               ),
-
               IconButton(
                 tooltip: 'กลับไปที่ตำแหน่งปัจจุบัน',
                 icon: Icon(Icons.my_location, color: Colors.brown.shade400),
@@ -767,9 +780,11 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
       ),
       body: Stack(
         children: [
-          FlutterMap(
+          // เนื้อหาหลักของแอป (แผนที่)
+          // ***** จุดแก้ไข 3: เพิ่ม fm. นำหน้าคลาสทั้งหมดจาก flutter_map *****
+          fm.FlutterMap(
             mapController: _mapController,
-            options: MapOptions(
+            options: fm.MapOptions(
               initialCenter: const LatLng(13.7563, 100.5018),
               initialZoom: 6.0,
               onTap: (_, latlng) {
@@ -779,21 +794,21 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
               },
             ),
             children: [
-              TileLayer(
+              fm.TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.example.coupon_map_v2',
               ),
-              MarkerLayer(
+              fm.MarkerLayer(
                 markers: [
                   if (_currentLocation != null)
-                    Marker(
+                    fm.Marker(
                       point: _currentLocation!,
                       width: 80,
                       height: 80,
                       child: Icon(Icons.person_pin_circle,
                           color: Colors.brown.shade700, size: 22.0),
                     ),
-                  ..._coupons.map((coupon) => Marker(
+                  ..._coupons.map((coupon) => fm.Marker(
                         point: coupon.position,
                         width: 40,
                         height: 40,
@@ -823,6 +838,8 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
               ),
             ],
           ),
+
+          // Loading Indicator
           if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.5),
@@ -838,7 +855,62 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
                 ),
               ),
             ),
+          
+          // Animation Overlay
+          if (_roleToShowInAnimation != null)
+             RoleAnimationOverlay(role: _roleToShowInAnimation!),
+
         ],
+      ),
+    );
+  }
+}
+
+class RoleAnimationOverlay extends StatelessWidget {
+  final UserRole role;
+
+  const RoleAnimationOverlay({super.key, required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    final isHunter = role == UserRole.hunter;
+    final animationPath = isHunter
+        ? 'assets/animations/hunter_animation.json'
+        : 'assets/animations/placer_animation.json';
+    final text = isHunter ? 'นักล่าคูปอง' : 'วางคูปอง';
+    final color = isHunter ? Colors.lightBlue.shade700 : Colors.orange.shade800;
+
+    return IgnorePointer(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        color: Colors.black.withOpacity(0.6),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Lottie.asset(
+                animationPath,
+                width: 250,
+                height: 250,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                text,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      color: color.withOpacity(0.8),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1,4 +1,4 @@
-package com.example.coupon_map_final
+package com.lacoupong.myapp
 
 import io.flutter.embedding.android.FlutterActivity
 
