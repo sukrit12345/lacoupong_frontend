@@ -22,7 +22,7 @@ class ApiService {
   // *** สำคัญ: ถ้าทดสอบบน Android Emulator ให้ใช้ 10.0.2.2
   // *** ถ้าทดสอบบนมือถือจริงที่ต่อ Wi-Fi เดียวกัน ให้ใช้ IP Address ของคอมพิวเตอร์คุณ
   // *** ตัวอย่าง: "http://192.168.1.100:3001/api"
-  final String baseUrl = "https://goldticket.up.railway.app:3001/api"; // <<--- !!! แก้ไข IP ADDRESS ตรงนี้ !!!
+  final String baseUrl = "https://goldticket.up.railway.app/api"; // <<--- !!! แก้ไข IP ADDRESS ตรงนี้ !!!
 
   Future<List<Coupon>> fetchCoupons() async {
     try {
