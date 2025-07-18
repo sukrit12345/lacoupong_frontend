@@ -22,6 +22,7 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+// This is the SINGLE, CORRECT block to load your keys.
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
@@ -29,45 +30,48 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.lacoupong.myapp"
+    namespace "com.paihaisuth.lacoupon"
     compileSdk flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = '1.8'
     }
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
 
-    signingConfigs {  // <<< ต้องอยู่ในนี้
+    // This is the corrected signingConfigs block with Groovy syntax
+    signingConfigs {
         release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
         }
     }
 
     defaultConfig {
-        applicationId "com.lacoupong.myapp"
+        applicationId "com.paihaisuth.lacoupon"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
 
+    // This is the corrected buildTypes block with Groovy syntax
     buildTypes {
         release {
+            // This is how you apply the signing configuration in Groovy
             signingConfig signingConfigs.release
-            // minifyEnabled false
-            // proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 }
@@ -76,4 +80,6 @@ flutter {
     source '../..'
 }
 
-dependencies {}
+dependencies {
+    // Your dependencies would go here
+}
