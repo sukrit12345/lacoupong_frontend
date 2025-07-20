@@ -279,8 +279,21 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
     _totalBoxesController.text = '1';
   }
 
+  // ***** จุดแก้ไข: ปรับดีไซน์ TextField ใน Dialog นี้ทั้งหมด *****
   void _showPlaceCouponDialog(LatLng position) {
     _clearForm();
+
+    // กำหนดสไตล์สำหรับ TextField ที่จะใช้ร่วมกัน
+    final inputDecoration = InputDecoration(
+      filled: true,
+      fillColor: Colors.grey.shade100,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none, // ทำให้ไม่มีเส้นขอบ
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -298,22 +311,23 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
                 children: [
                   TextField(
                       controller: _shopNameController,
-                      decoration: const InputDecoration(labelText: 'ชื่อร้าน *')),
+                      decoration:
+                          inputDecoration.copyWith(labelText: 'ชื่อร้าน *')),
                   const SizedBox(height: 8),
                   TextField(
                       controller: _igController,
                       decoration:
-                          const InputDecoration(labelText: 'ไอจี (ถ้ามี)')),
+                          inputDecoration.copyWith(labelText: 'ไอจี (ถ้ามี)')),
                   const SizedBox(height: 8),
                   TextField(
                       controller: _facebookController,
-                      decoration:
-                          const InputDecoration(labelText: 'เฟสบุ๊ก (ถ้ามี)')),
+                      decoration: inputDecoration.copyWith(
+                          labelText: 'เฟสบุ๊ก (ถ้ามี)')),
                   const SizedBox(height: 8),
                   TextField(
                       controller: _missionController,
-                      decoration:
-                          const InputDecoration(labelText: 'ภารกิจที่ต้องทำ *'),
+                      decoration: inputDecoration.copyWith(
+                          labelText: 'ภารกิจที่ต้องทำ *'),
                       maxLines: 3),
                   const SizedBox(height: 16),
                   Text('ส่วนลด (เลือกกรอกเพียง 1 ช่อง)',
@@ -326,7 +340,7 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
                       Expanded(
                         child: TextField(
                           controller: _discountPercentController,
-                          decoration: InputDecoration(
+                          decoration: inputDecoration.copyWith(
                               labelText: '(%)', enabled: !isBahtFilled),
                           keyboardType: TextInputType.number,
                           onChanged: (value) => setDialogState(() {}),
@@ -340,7 +354,7 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
                       Expanded(
                         child: TextField(
                           controller: _discountBahtController,
-                          decoration: InputDecoration(
+                          decoration: inputDecoration.copyWith(
                               labelText: '(บาท)', enabled: !isPercentFilled),
                           keyboardType: TextInputType.number,
                           onChanged: (value) => setDialogState(() {}),
@@ -351,7 +365,7 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
                   const SizedBox(height: 8),
                   TextField(
                       controller: _totalBoxesController,
-                      decoration: const InputDecoration(
+                      decoration: inputDecoration.copyWith(
                           labelText: 'จำนวนคูปองทั้งหมด *'),
                       keyboardType: TextInputType.number),
                 ],
@@ -366,8 +380,8 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
                   if (_shopNameController.text.isEmpty ||
                       _missionController.text.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content:
-                            Text('กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน')));
+                        content: Text(
+                            'กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน')));
                     return;
                   }
                   if (_discountPercentController.text.isEmpty &&
@@ -636,8 +650,7 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
           actions: [
             TextButton(
               onPressed: () async {
-                final Uint8List? image =
-                    await _screenshotController.capture();
+                final Uint8List? image = await _screenshotController.capture();
                 if (image == null) return;
 
                 final directory = await getApplicationDocumentsDirectory();
@@ -855,11 +868,10 @@ class _CouponMapScreenState extends State<CouponMapScreen> {
                 ),
               ),
             ),
-          
+
           // Animation Overlay
           if (_roleToShowInAnimation != null)
-             RoleAnimationOverlay(role: _roleToShowInAnimation!),
-
+            RoleAnimationOverlay(role: _roleToShowInAnimation!),
         ],
       ),
     );
@@ -877,7 +889,7 @@ class RoleAnimationOverlay extends StatelessWidget {
     final animationPath = isHunter
         ? 'assets/animations/hunter_animation.json'
         : 'assets/animations/placer_animation.json';
-    final text = isHunter ? 'นักล่าคูปอง' : 'วางคูปอง';
+    final text = isHunter ? 'ล่าคูปอง' : 'วางคูปอง';
     final color = isHunter ? Colors.lightBlue.shade700 : Colors.orange.shade800;
 
     return IgnorePointer(
